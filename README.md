@@ -53,6 +53,10 @@ The agent-facing files in `skills/` describe callable input/output contracts for
 - [Support](SUPPORT.md)
 - [Changelog](CHANGELOG.md)
 
+## Support
+
+[Support Tinkora on Ko-fi](https://ko-fi.com/tinkora)
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

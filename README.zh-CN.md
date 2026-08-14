@@ -53,6 +53,10 @@ cargo check -p color_atlas_web --target wasm32-unknown-unknown --locked
 - [支持](SUPPORT.md)
 - [变更记录](CHANGELOG.md)
 
+## 支持
+
+[在 Ko-fi 上支持 Tinkora](https://ko-fi.com/tinkora)
+
 ## 许可证
 
 MIT，详见 [LICENSE](LICENSE)。
