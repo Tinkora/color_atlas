@@ -1,0 +1,88 @@
+{
+  "name": "color_atlas",
+  "version": "0.1.0-alpha.1",
+  "description": "Browser-native color toolkit: palette extraction from images, color harmony, WCAG contrast checker, color blindness simulator, gradient generator. All WASM-powered, zero server uploads.",
+  "tools": [
+    {
+      "name": "color_atlas_convert",
+      "description": "Convert a color between formats: hex, rgb, hsl, hsv, lab, css. Returns all format representations for the given color.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "color": {
+            "type": "string",
+            "description": "Color in hex format, e.g. '#3B82F6' or '#f00' or 'ff8800'."
+          },
+          "format": {
+            "type": "string",
+            "enum": ["hsl", "hsv", "lab", "css"],
+            "description": "Optional single format to return. If omitted, all formats are returned."
+          }
+        },
+        "required": ["color"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "color_atlas_contrast",
+      "description": "Check WCAG 2.1 contrast compliance between foreground and background colors. Returns ratio and AA/AAA pass/fail for normal and large text.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "foreground": {
+            "type": "string",
+            "description": "Foreground color hex, e.g. '#000000'."
+          },
+          "background": {
+            "type": "string",
+            "description": "Background color hex, e.g. '#ffffff'."
+          }
+        },
+        "required": ["foreground", "background"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "color_atlas_harmony",
+      "description": "Generate color harmony variations from a base color: complementary, analogous, triadic, tetradic, monochromatic, shades, or tints.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "color": {
+            "type": "string",
+            "description": "Base color in hex format."
+          },
+          "type": {
+            "type": "string",
+            "enum": ["complementary", "analogous", "triadic", "tetradic", "monochromatic", "shades", "tints"],
+            "description": "Harmony type."
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "default": 5,
+            "description": "Number of colors to generate for monochromatic/shades/tints variants."
+          }
+        },
+        "required": ["color", "type"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "color_atlas_cvd",
+      "description": "Simulate how a color appears to people with color vision deficiency: protanopia (red-blind), deuteranopia (green-blind), and tritanopia (blue-blind).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "color": {
+            "type": "string",
+            "description": "Color hex to simulate."
+          }
+        },
+        "required": ["color"],
+        "additionalProperties": false
+      }
+    }
+  ]
+}
