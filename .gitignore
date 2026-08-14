@@ -1,0 +1,6 @@
+/target/
+crates/color_atlas_web/static/pkg/
+.playwright-cli/
+output/
+crates/color_atlas_web/node_modules/
+crates/color_atlas_web/test-results/
