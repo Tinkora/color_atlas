@@ -70,8 +70,9 @@ jobs:
             assets = Dir["release-assets/*"].select { |path| File.file?(path) && !path.end_with?("release-metadata.json") }
             files = assets.map.with_index { |path, i| {"SPDXID" => "SPDXRef-File-#{i + 1}", "fileName" => "./#{File.basename(path)}", "checksums" => [{"algorithm" => "SHA256", "checksumValue" => Digest::SHA256.file(path).hexdigest}], "licenseConcluded" => "NOASSERTION", "licenseInfoInFiles" => ["NOASSERTION"], "copyrightText" => "NOASSERTION"} }
             sbom = {"spdxVersion" => "SPDX-2.3", "dataLicense" => "CC0-1.0", "SPDXID" => "SPDXRef-DOCUMENT", "name" => "Tinkora/color_atlas #{version}", "documentNamespace" => "https://github.com/Tinkora/color_atlas/releases/#{version}", "creationInfo" => {"creators" => ["Tool: Tinkora release workflow"]}, "packages" => [{"SPDXID" => "SPDXRef-Package", "name" => "Tinkora/color_atlas", "versionInfo" => version, "downloadLocation" => "NOASSERTION", "filesAnalyzed" => true, "licenseConcluded" => "MIT", "licenseDeclared" => "MIT", "copyrightText" => "NOASSERTION"}], "files" => files}
-            File.write("release-assets/SBOM.spdx.json", JSON.pretty_generate(sbom) + "\\n")
+            File.write("release-assets/SBOM.spdx.json", JSON.pretty_generate(sbom) + "\n")
           '
+          jq empty release-assets/SBOM.spdx.json
           (cd release-assets && shasum -a 256 -- * > SHA256SUMS)
       - name: Attest release provenance
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a
