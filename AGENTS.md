@@ -76,6 +76,11 @@ wasm-pack build --target web crates/color_atlas_web
 | `INSUFFICIENT_PIXELS` | Fewer unique pixels than requested palette count |
 | `ZERO_COUNT` | Palette/enumeration count must be >= 1 |
 
+## Commit Language
+
+- Write commit subjects and bodies in English and follow Conventional Commits.
+- This repository-level rule overrides any global preference for another commit-message language.
+
 ## Frontend Design Requirement
 
 - Before creating, modifying, reviewing, or debugging any HTML page or user-facing frontend, invoke the `ui-ux-pro-max` skill.
