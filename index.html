@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>color_atlas — Local color workbench</title>
+<meta name="description" content="A browser-local color workbench for palette extraction, harmony, WCAG contrast, color-vision previews, and CSS gradients.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0F172A; --surface: #1E293B; --surface2: #334155;
+    --cta: #3B82F6; --cta-hover: #2563EB;
+    --text: #F8FAFC; --text-muted: #94A3B8; --accent: #8B5CF6;
+    --font-heading: 'JetBrains Mono', monospace;
+    --font-body: 'IBM Plex Sans', system-ui, sans-serif;
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: var(--font-body); background: var(--bg); color: var(--text); line-height: 1.7; }
+  h1, h2, h3 { font-family: var(--font-heading); font-weight: 600; }
+  h2 { font-size: 2rem; margin-bottom: 1rem; }
+  h3 { font-size: 1.25rem; margin-bottom: .5rem; }
+  a { color: var(--cta); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  p { color: var(--text-muted); }
+
+  nav { position: fixed; top: 0; left: 0; right: 0; z-index: 50; background: rgb(15 23 42 / .85); backdrop-filter: blur(12px); border-bottom: 1px solid rgb(51 65 85 / .5); }
+  .nav-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; height: 60px; }
+  .nav-left { display: flex; align-items: center; gap: 32px; }
+  .nav-logo { font-family: var(--font-heading); font-size: 1.1rem; font-weight: 700; color: var(--cta); }
+  .nav-links { display: flex; gap: 24px; }
+  .nav-links a { color: var(--text-muted); font-size: .9rem; cursor: pointer; transition: color .2s; }
+  .nav-links a:hover { color: var(--text); text-decoration: none; }
+
+  section { max-width: 1200px; margin: 0 auto; padding: 80px 24px; }
+  .hero { min-height: 100vh; display: flex; align-items: center; padding-top: 60px; }
+  .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+  .hero h1 { font-size: 3rem; line-height: 1.2; margin-bottom: 1rem; }
+  .hero h1 span { color: var(--cta); }
+  .hero p { font-size: 1.2rem; max-width: 480px; }
+
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 28px; border-radius: 8px; font-family: var(--font-heading); font-size: .95rem; font-weight: 600; cursor: pointer; border: none; transition: all .2s; }
+  .btn-primary { background: var(--cta); color: #fff; }
+  .btn-primary:hover { background: var(--cta-hover); transform: translateY(-1px); box-shadow: 0 4px 20px rgb(59 130 246 / .3); }
+  .btn-outline { background: transparent; border: 1px solid var(--surface2); color: var(--text); }
+  .btn-outline:hover { border-color: var(--cta); color: var(--cta); transform: translateY(-1px); }
+  .hero-btns { display: flex; gap: 12px; margin-top: 24px; }
+
+  .hero-illustration { background: var(--surface); border-radius: 16px; border: 1px solid var(--surface2); padding: 24px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .hero-swatch { aspect-ratio: 1; border-radius: 10px; }
+  .hero-swatch:nth-child(1) { background: #EF4444; } .hero-swatch:nth-child(2) { background: #F97316; }
+  .hero-swatch:nth-child(3) { background: #EAB308; } .hero-swatch:nth-child(4) { background: #22C55E; }
+  .hero-swatch:nth-child(5) { background: #3B82F6; } .hero-swatch:nth-child(6) { background: #8B5CF6; }
+  .hero-swatch:nth-child(7) { background: #A855F7; } .hero-swatch:nth-child(8) { background: #EC4899; }
+  .hero-swatch:nth-child(9) { background: #F43F5E; } .hero-swatch:nth-child(10) { background: #64748B; }
+
+  #features h2 { text-align: center; }
+  #features .subtitle { text-align: center; margin-bottom: 48px; font-size: 1.1rem; }
+  .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .feature-card { background: var(--surface); border: 1px solid var(--surface2); border-radius: 12px; padding: 28px; transition: all .2s; cursor: pointer; }
+  .feature-card:hover { border-color: var(--cta); transform: translateY(-2px); box-shadow: 0 4px 16px rgb(59 130 246 / .1); }
+  .feature-card svg { width: 36px; height: 36px; margin-bottom: 16px; color: var(--cta); }
+  .feature-card h3 { font-size: 1.1rem; margin-bottom: .5rem; }
+  .feature-card p { font-size: .95rem; }
+
+  .code-section { background: var(--surface); border-radius: 16px; border: 1px solid var(--surface2); padding: 40px 48px; }
+  .code-block { background: rgb(2 6 23); border-radius: 8px; padding: 20px 24px; margin: 16px 0 24px; font-family: var(--font-heading); font-size: .85rem; line-height: 1.8; color: var(--text); overflow-x: auto; border: 1px solid var(--surface2); }
+  .code-block .comment { color: #6B7280; }
+  .code-block .cmd { color: var(--cta); }
+  .code-block .path { color: #F59E0B; }
+
+  footer { text-align: center; padding: 48px 24px; border-top: 1px solid var(--surface2); }
+  footer p { font-size: .85rem; }
+
+  @media (max-width: 768px) {
+    .hero-grid { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 2rem; }
+    .features-grid { grid-template-columns: 1fr; }
+    .nav-links { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <div class="nav-left">
+      <span class="nav-logo">color_atlas</span>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#install">Run locally</a>
+        <a href="https://github.com/Tinkora/color_atlas" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <section class="hero">
+    <div class="hero-grid">
+      <div>
+        <h1>Local color<br><span>workbench</span></h1>
+        <p>Extract palettes, explore harmonies, check WCAG contrast, preview color-vision differences, and generate CSS gradients without uploading your assets.</p>
+        <div class="hero-btns">
+          <a href="#install" class="btn btn-primary" aria-label="Run color_atlas locally">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
+            Run locally
+          </a>
+          <a href="#features" class="btn btn-outline" aria-label="View features">View features</a>
+        </div>
+      </div>
+      <div class="hero-illustration" aria-hidden="true">
+        <div class="hero-swatch"></div><div class="hero-swatch"></div><div class="hero-swatch"></div><div class="hero-swatch"></div><div class="hero-swatch"></div>
+        <div class="hero-swatch"></div><div class="hero-swatch"></div><div class="hero-swatch"></div><div class="hero-swatch"></div><div class="hero-swatch"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features">
+    <h2>Focused tools</h2>
+    <p class="subtitle">A private, browser-first workflow for developers and designers.</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        <h3>Palette extraction</h3>
+        <p>Extract dominant colors from a local image with bounded k-means sampling.</p>
+      </div>
+      <div class="feature-card">
+        <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10M12 2a15.3 15.3 0 00-4 10 15.3 15.3 0 004 10"/></svg>
+        <h3>Color harmony</h3>
+        <p>Generate complementary, analogous, triadic, tetradic, monochromatic, shade, and tint variants.</p>
+      </div>
+      <div class="feature-card">
+        <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
+        <h3>WCAG contrast</h3>
+        <p>Compute contrast ratios and AA/AAA thresholds for normal and large text.</p>
+      </div>
+      <div class="feature-card">
+        <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        <h3>Vision preview</h3>
+        <p>Review lightweight protanopia, deuteranopia, and tritanopia approximations.</p>
+      </div>
+      <div class="feature-card">
+        <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/></svg>
+        <h3>CSS gradients</h3>
+        <p>Build multi-stop linear gradients and copy the declaration.</p>
+      </div>
+      <div class="feature-card">
+        <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <h3>Private by default</h3>
+        <p>Color calculations run in browser WASM; images are not uploaded to a server.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <h2>Run locally</h2>
+    <p>Use the Rust toolchain and wasm-pack to launch the editor locally.</p>
+    <div class="code-section">
+      <h3>1. Clone and build</h3>
+      <div class="code-block">
+        <span class="comment"># Clone the repository</span><br>
+        <span class="cmd">git clone</span> <span class="path">https://github.com/Tinkora/color_atlas.git</span><br>
+        <span class="cmd">cd</span> color_atlas<br><br>
+        <span class="comment"># Build the WebAssembly package</span><br>
+        <span class="cmd">wasm-pack build</span> --target web --release crates/color_atlas_web --out-dir static/pkg
+      </div>
+      <h3>2. Start the local server</h3>
+      <div class="code-block">
+        <span class="cmd">cd</span> crates/color_atlas_web/static<br>
+        <span class="cmd">python3 -m http.server</span> 8080<br><br>
+        <span class="comment"># Open http://localhost:8080 in a browser</span>
+      </div>
+    </div>
+  </section>
+
+  <section style="text-align:center;">
+    <div style="background:linear-gradient(135deg, var(--surface), var(--surface2)); border-radius:20px; padding:60px 40px;">
+      <h2 style="font-size:2rem;">Make color decisions faster</h2>
+      <p style="max-width:500px; margin:16px auto 32px; font-size:1.1rem;">Open source, local-first, and focused on the work developers repeat.</p>
+      <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+        <a href="#install" class="btn btn-primary" aria-label="Get started">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
+          Get started
+        </a>
+        <a href="https://github.com/Tinkora/color_atlas" target="_blank" rel="noopener" class="btn btn-outline" aria-label="View the GitHub repository">
+          <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.335-1.755-1.335-1.755-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12z"/></svg>
+          View on GitHub
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer><p>color_atlas by Tinkora · MIT License · <a href="https://github.com/Tinkora/color_atlas">GitHub</a></p></footer>
+
+</body>
+</html>

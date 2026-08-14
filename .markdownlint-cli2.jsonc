@@ -1,0 +1,11 @@
+{
+  "config": {
+    "MD013": false
+  },
+  "ignores": [
+    "AGENTS.md",
+    "design-system/**/*.md",
+    "skills/**/*.md",
+    "**/node_modules/**"
+  ]
+}

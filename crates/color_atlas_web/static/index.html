@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>color_atlas — Local color workbench</title>
+<link rel="icon" href="data:,">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f172a; --surface: #1e293b; --surface2: #334155; --surface3: #475569;
+    --text: #f8fafc; --text-muted: #94a3b8; --accent: #3b82f6; --accent2: #8b5cf6;
+    --green: #22c55e; --red: #ef4444; --yellow: #eab308;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --font-sans: system-ui, -apple-system, sans-serif;
+  }
+  body { font-family: var(--font-sans); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+  header { background: var(--surface); border-bottom: 1px solid var(--surface2); padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-family: var(--font-mono); font-size: 1.1rem; font-weight: 700; color: var(--accent); }
+  nav { display: flex; gap: 2px; background: var(--surface2); padding: 2px; border-radius: 8px; }
+  nav button { padding: 6px 16px; border: none; background: transparent; color: var(--text-muted); font-size: .85rem; cursor: pointer; border-radius: 6px; font-family: var(--font-sans); transition: color .2s, background .2s; }
+  nav button:hover { color: var(--text); }
+  nav button.active { background: var(--accent); color: #fff; }
+  main { flex: 1; padding: 24px; max-width: 1100px; margin: 0 auto; width: 100%; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Color picker row */
+  .color-picker-row { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+  .color-picker-row input[type="color"] { width: 56px; height: 56px; border: 2px solid var(--surface2); border-radius: 8px; cursor: pointer; padding: 2px; background: transparent; }
+  .color-picker-row input[type="text"] { flex: 1; min-width: 200px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--surface2); border-radius: 8px; color: var(--text); font-family: var(--font-mono); font-size: .95rem; }
+  .preview-swatch { width: 80px; height: 56px; border-radius: 8px; border: 2px solid var(--surface2); }
+
+  /* Format converter grids */
+  .format-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 20px; }
+  .format-card { background: var(--surface); border: 1px solid var(--surface2); border-radius: 8px; padding: 16px; }
+  .format-card .label { font-size: .75rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; letter-spacing: .5px; }
+  .format-card .value { font-family: var(--font-mono); font-size: 1rem; word-break: break-all; color: var(--text); }
+  .format-card .value small { color: var(--text-muted); font-size: .8rem; }
+  .copy-btn { display: inline-block; margin-top: 6px; padding: 4px 10px; background: var(--surface2); color: var(--text); border: none; border-radius: 5px; cursor: pointer; font-size: .75rem; font-family: var(--font-mono); transition: background .15s; }
+  .copy-btn:hover { background: var(--accent); }
+
+  /* Swatches */
+  .swatch-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+  .swatch { width: 64px; height: 64px; border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: border-color .2s, box-shadow .2s; position: relative; display: flex; align-items: flex-end; justify-content: center; }
+  .swatch:hover { border-color: var(--accent); box-shadow: 0 6px 20px rgba(0,0,0,.3); }
+  .swatch.selected { border-color: var(--accent2); box-shadow: 0 0 0 3px rgba(139,92,246,.4); }
+  .swatch-label { font-size: .6rem; font-family: var(--font-mono); color: #fff; text-shadow: 0 0 4px rgba(0,0,0,.7); padding: 4px; text-align: center; width: 100%; border-radius: 0 0 8px 8px; background: rgba(0,0,0,.25); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Upload area */
+  .upload-area { border: 2px dashed var(--surface2); border-radius: 8px; padding: 40px; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; margin-bottom: 20px; }
+  .upload-area:hover { border-color: var(--accent); background: rgba(59,130,246,.05); }
+  .upload-area.dragover { border-color: var(--green); background: rgba(34,197,94,.05); }
+  .upload-area input[type="file"] { display: none; }
+
+  /* Contrast section */
+  .contrast-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .contrast-color-block { text-align: center; }
+  .contrast-color-block input[type="color"] { width: 80px; height: 80px; border-radius: 8px; border: 3px solid var(--surface2); cursor: pointer; padding: 2px; }
+  .contrast-result { margin-top: 16px; padding: 20px; background: var(--surface); border-radius: 8px; border: 1px solid var(--surface2); }
+  .ratio-display { font-family: var(--font-mono); font-size: 2.5rem; font-weight: 700; text-align: center; }
+  .badge-row { display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap; justify-content: center; }
+  .wcag-badge { padding: 8px 16px; border-radius: 8px; font-size: .8rem; font-weight: 600; display: flex; flex-direction: column; align-items: center; }
+  .wcag-badge.pass { background: rgba(34,197,94,.15); color: var(--green); border: 1px solid rgba(34,197,94,.3); }
+  .wcag-badge.fail { background: rgba(239,68,68,.15); color: var(--red); border: 1px solid rgba(239,68,68,.3); }
+  .preview-bar { height: 36px; border-radius: 8px; margin-top: 12px; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: .85rem; }
+
+  /* Gradient */
+  .gradient-stops { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+  .gradient-stop { display: flex; align-items: center; gap: 6px; background: var(--surface); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--surface2); }
+  .gradient-stop input[type="color"] { width: 32px; height: 32px; border: none; padding: 0; cursor: pointer; border-radius: 6px; }
+  .gradient-stop .remove-stop { background: var(--red); color: #fff; border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: .9rem; line-height: 1; }
+  .gradient-preview { width: 100%; height: 120px; border-radius: 8px; margin: 16px 0; }
+  .css-output { background: #020617; border: 1px solid var(--surface2); border-radius: 8px; padding: 16px; font-family: var(--font-mono); font-size: .85rem; overflow-x: auto; white-space: pre-wrap; color: var(--green); }
+
+  /* CVD section */
+  .cvd-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 16px; }
+  .cvd-card { background: var(--surface); border-radius: 8px; padding: 12px; text-align: center; border: 1px solid var(--surface2); }
+  .cvd-card .cvd-swatch { width: 100%; height: 60px; border-radius: 8px; margin-bottom: 8px; }
+
+  /* Buttons */
+  .btn { padding: 10px 20px; border-radius: 8px; font-family: var(--font-mono); font-size: .85rem; font-weight: 600; cursor: pointer; border: none; transition: color .2s, background .2s, border-color .2s; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-secondary { background: var(--surface2); color: var(--text); }
+  .btn-secondary:hover { background: var(--surface3); }
+  .btn-secondary.active { background: var(--accent); color: #fff; }
+  .btn-sm { padding: 6px 12px; font-size: .75rem; }
+
+  /* Section titles */
+  .section-title { font-family: var(--font-mono); font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; color: var(--text); }
+  .section-subtitle { font-size: .85rem; color: var(--text-muted); margin-bottom: 16px; }
+  hr { border: none; border-top: 1px solid var(--surface2); margin: 20px 0; }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--green); color: #000; padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: .85rem; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 999; }
+  .toast.show { opacity: 1; }
+
+  button:focus-visible, input:focus-visible, select:focus-visible, .upload-area:focus-visible { outline: 3px solid var(--accent2); outline-offset: 2px; }
+  .skip-link { position: absolute; left: 12px; top: -48px; z-index: 10; background: var(--text); color: var(--bg); padding: 8px 12px; border-radius: 6px; }
+  .skip-link:focus { top: 12px; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+
+  @media (max-width: 600px) {
+    header { flex-direction: column; height: auto; padding: 10px 16px; gap: 8px; }
+    nav { flex-wrap: wrap; }
+    .contrast-layout { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to content</a>
+
+<header>
+  <h1>color_atlas</h1>
+  <nav aria-label="Color tools" role="tablist">
+    <button type="button" role="tab" aria-selected="true" data-tab="convert" class="active">Convert</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="palette">Palette</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="harmony">Harmony</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="contrast">Contrast</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="gradient">Gradient</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="cvd">Vision preview</button>
+  </nav>
+</header>
+
+<main id="main-content">
+  <!-- Tab: color conversion -->
+  <div id="tab-convert" class="tab-panel active" role="tabpanel">
+    <div class="color-picker-row">
+      <input type="color" id="cp-convert" value="#3b82f6" aria-label="Convert color picker">
+      <input type="text" id="hex-input" value="#3B82F6" placeholder="#RRGGBB" aria-label="Convert hex color">
+      <div class="preview-swatch" id="convert-preview" style="background:#3b82f6"></div>
+    </div>
+    <div class="format-grid" id="format-output">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <!-- Tab: palette extraction -->
+  <div id="tab-palette" class="tab-panel" role="tabpanel">
+    <p class="section-subtitle">Extract up to 20 dominant colors locally with bounded k-means sampling.</p>
+    <div class="upload-area" id="palette-upload" tabindex="0" role="button" aria-controls="palette-file">
+      <p style="font-size:1.2rem;margin-bottom:8px;font-family:var(--font-mono);">DROP IMAGE</p>
+      <p>Choose or drop an image</p>
+      <p style="font-size:.8rem;color:var(--text-muted);">PNG / JPEG / WebP. Images stay in your browser.</p>
+      <input type="file" id="palette-file" accept="image/png,image/jpeg,image/webp">
+    </div>
+    <canvas id="palette-canvas" style="display:none"></canvas>
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
+      <label style="color:var(--text-muted);font-size:.85rem;" for="palette-count">Requested colors</label>
+      <input type="range" id="palette-count" min="1" max="20" value="6" style="flex:1;accent-color:var(--accent);">
+      <span id="palette-count-val" style="font-family:var(--font-mono);min-width:24px;">6</span>
+    </div>
+    <div class="swatch-row" id="palette-swatches"></div>
+    <p style="color:var(--text-muted);font-size:.8rem;" id="palette-status" aria-live="polite">Choose an image to begin.</p>
+  </div>
+
+  <!-- Tab: harmony -->
+  <div id="tab-harmony" class="tab-panel" role="tabpanel">
+    <div class="color-picker-row">
+      <input type="color" id="cp-harmony" value="#3b82f6" aria-label="Harmony color picker">
+      <input type="text" id="harmony-hex" value="#3B82F6" placeholder="Base #hex" aria-label="Base hex color">
+      <div class="preview-swatch" id="harmony-preview" style="background:#3b82f6"></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+      <button type="button" class="btn btn-secondary btn-sm" data-harmony="complementary" aria-pressed="false">Complementary</button>
+      <button type="button" class="btn btn-secondary btn-sm" data-harmony="analogous" aria-pressed="false">Analogous</button>
+      <button type="button" class="btn btn-secondary btn-sm" data-harmony="triadic" aria-pressed="false">Triadic</button>
+      <button type="button" class="btn btn-secondary btn-sm" data-harmony="tetradic" aria-pressed="false">Tetradic</button>
+      <button type="button" class="btn btn-secondary btn-sm" data-harmony="monochromatic" aria-pressed="false">Monochromatic</button>
+      <button type="button" class="btn btn-secondary btn-sm" data-harmony="shades" aria-pressed="false">Shades</button>
+      <button type="button" class="btn btn-secondary btn-sm" data-harmony="tints" aria-pressed="false">Tints</button>
+    </div>
+    <div class="swatch-row" id="harmony-swatches"></div>
+  </div>
+
+  <!-- Tab: WCAG contrast -->
+  <div id="tab-contrast" class="tab-panel" role="tabpanel">
+    <div class="contrast-layout">
+      <div class="contrast-color-block">
+        <p style="margin-bottom:8px;color:var(--text-muted);">Foreground</p>
+        <input type="color" id="cp-fg" value="#000000" aria-label="Foreground color picker">
+        <input type="text" id="fg-hex" value="#000000" aria-label="Foreground hex color" style="width:100%;margin-top:8px;padding:6px 10px;background:var(--surface);border:1px solid var(--surface2);border-radius:6px;color:var(--text);font-family:var(--font-mono);text-align:center;">
+      </div>
+      <div class="contrast-color-block">
+        <p style="margin-bottom:8px;color:var(--text-muted);">Background</p>
+        <input type="color" id="cp-bg" value="#ffffff" aria-label="Background color picker">
+        <input type="text" id="bg-hex" value="#ffffff" aria-label="Background hex color" style="width:100%;margin-top:8px;padding:6px 10px;background:var(--surface);border:1px solid var(--surface2);border-radius:6px;color:var(--text);font-family:var(--font-mono);text-align:center;">
+      </div>
+    </div>
+    <div class="contrast-result" id="contrast-result">
+      <div class="ratio-display" id="ratio-display">21.00:1</div>
+      <div class="badge-row" id="wcag-badges"></div>
+    </div>
+    <div class="preview-bar" id="contrast-preview-bar" style="margin-top:16px;">Sample text preview</div>
+  </div>
+
+  <!-- Tab: gradient -->
+  <div id="tab-gradient" class="tab-panel" role="tabpanel">
+    <p class="section-subtitle">Build a multi-stop CSS gradient and copy the declaration.</p>
+    <div class="gradient-stops" id="gradient-stops">
+      <div class="gradient-stop"><input type="color" value="#3b82f6" aria-label="Gradient stop 1"><span style="font-family:var(--font-mono);font-size:.75rem;">#3B82F6</span><button type="button" class="remove-stop" title="Remove gradient stop" aria-label="Remove gradient stop">×</button></div>
+      <div class="gradient-stop"><input type="color" value="#8b5cf6" aria-label="Gradient stop 2"><span style="font-family:var(--font-mono);font-size:.75rem;">#8B5CF6</span><button type="button" class="remove-stop" title="Remove gradient stop" aria-label="Remove gradient stop">×</button></div>
+    </div>
+    <button type="button" class="btn btn-secondary btn-sm" id="add-stop">Add stop</button>
+    <div class="gradient-preview" id="gradient-preview" style="background:linear-gradient(90deg, #3b82f6, #8b5cf6)"></div>
+    <div style="display:flex;gap:8px;align-items:center;margin:12px 0;">
+      <label style="font-size:.85rem;color:var(--text-muted);" for="gradient-direction">Direction</label>
+      <select id="gradient-direction" style="background:var(--surface);color:var(--text);border:1px solid var(--surface2);border-radius:6px;padding:6px 10px;font-family:var(--font-sans);">
+        <option value="90deg">Horizontal</option>
+        <option value="180deg">Vertical</option>
+        <option value="45deg">Diagonal down-right</option>
+        <option value="135deg">Diagonal down-left</option>
+        <option value="0deg">Up</option>
+        <option value="270deg">Left</option>
+      </select>
+    </div>
+    <p style="font-size:.8rem;color:var(--text-muted);margin-bottom:6px;">CSS declaration</p>
+    <div class="css-output" id="gradient-css">background: linear-gradient(90deg, #3B82F6, #8B5CF6);</div>
+    <button type="button" class="btn btn-primary btn-sm" id="copy-gradient" style="margin-top:8px;">Copy CSS</button>
+  </div>
+
+  <!-- Tab: color-vision preview -->
+  <div id="tab-cvd" class="tab-panel" role="tabpanel">
+    <div class="color-picker-row">
+      <input type="color" id="cp-cvd" value="#e74c3c" aria-label="Vision preview color picker">
+      <input type="text" id="cvd-hex" value="#E74C3C" placeholder="Source #hex" aria-label="Source hex color">
+      <div class="preview-swatch" id="cvd-preview" style="background:#e74c3c"></div>
+    </div>
+    <div class="cvd-grid" id="cvd-output">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite">Copied</div>
+
+<script type="module">
+import init, {
+  wasm_hex_to_color,
+  wasm_color_to_hex,
+  wasm_color_to_css,
+  wasm_rgb_to_hsl,
+  wasm_hsl_to_rgb,
+  wasm_rgb_to_hsv,
+  wasm_hsv_to_rgb,
+  wasm_rgb_to_lab,
+  wasm_extract_palette,
+  wasm_complementary,
+  wasm_analogous,
+  wasm_triadic,
+  wasm_tetradic,
+  wasm_monochromatic,
+  wasm_shades,
+  wasm_tints,
+  wasm_contrast_ratio,
+  wasm_protanopia,
+  wasm_deuteranopia,
+  wasm_tritanopia
+} from './pkg/color_atlas_web.js';
+
+// Initialize the generated WASM module.
+await init();
+
+// Small DOM helpers keep user-controlled values out of HTML parsing.
+function parseValue(value) {
+  return typeof value === 'string' ? JSON.parse(value) : value;
+}
+
+function colorToJson(hex) {
+  const c = parseValue(wasm_hex_to_color(hex));
+  return JSON.stringify(c);
+}
+
+function makeSwatch(colorJson, label) {
+  const c = JSON.parse(colorJson);
+  const hex = '#' + [c.r, c.g, c.b].map(v => v.toString(16).padStart(2,'0')).join('').toUpperCase();
+  const div = document.createElement('div');
+  div.className = 'swatch';
+  div.style.background = hex;
+  div.title = `${hex} - Select to copy`;
+  div.setAttribute('role', 'button');
+  div.setAttribute('aria-label', `${hex} - Select to copy`);
+  div.tabIndex = 0;
+  const labelElement = document.createElement('span');
+  labelElement.className = 'swatch-label';
+  labelElement.textContent = label || hex;
+  div.appendChild(labelElement);
+  const copy = () => {
+    navigator.clipboard.writeText(hex).then(() => toast(`Copied ${hex}`));
+  };
+  div.addEventListener('click', () => {
+    document.querySelectorAll('.swatch.selected').forEach(s => s.classList.remove('selected'));
+    div.classList.add('selected');
+    copy();
+  });
+  div.addEventListener('keydown', event => {
+    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); copy(); }
+  });
+  return div;
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+// Tab switching keeps the active tab synchronized for keyboard and screen-reader users.
+document.querySelectorAll('nav button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('nav button').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-selected', 'false');
+    });
+    btn.classList.add('active');
+    btn.setAttribute('aria-selected', 'true');
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// Color conversion tab.
+function updateConvertFormats() {
+  const hex = document.getElementById('hex-input').value.trim();
+  const preview = document.getElementById('convert-preview');
+  try {
+    const colorJson = colorToJson(hex);
+    const c = JSON.parse(colorJson);
+    preview.style.background = '#' + [c.r, c.g, c.b].map(v => v.toString(16).padStart(2,'0')).join('');
+
+    const hsl = parseValue(wasm_rgb_to_hsl(colorJson));
+    const hsv = parseValue(wasm_rgb_to_hsv(colorJson));
+    const lab = parseValue(wasm_rgb_to_lab(colorJson));
+    const cssStr = wasm_color_to_css(colorJson);
+
+    const formats = [
+      { label: 'HEX', value: wasm_color_to_hex(colorJson) },
+      { label: 'RGB', value: `rgb(${c.r}, ${c.g}, ${c.b})` },
+      { label: 'HSL', value: `hsl(${hsl.h.toFixed(0)}, ${(hsl.s*100).toFixed(1)}%, ${(hsl.l*100).toFixed(1)}%)` },
+      { label: 'HSV', value: `hsv(${hsv.h.toFixed(0)}, ${(hsv.s*100).toFixed(1)}%, ${(hsv.v*100).toFixed(1)}%)` },
+      { label: 'CIELAB', value: `lab(${lab.l.toFixed(1)}, ${lab.a.toFixed(1)}, ${lab.b.toFixed(1)})` },
+      { label: 'CSS', value: cssStr },
+    ];
+
+    const output = document.getElementById('format-output');
+    output.replaceChildren();
+    formats.forEach(format => {
+      const card = document.createElement('div');
+      card.className = 'format-card';
+      const label = document.createElement('div');
+      label.className = 'label';
+      label.textContent = format.label;
+      const value = document.createElement('div');
+      value.className = 'value';
+      value.textContent = format.value;
+      const copyButton = document.createElement('button');
+      copyButton.type = 'button';
+      copyButton.className = 'copy-btn';
+      copyButton.textContent = 'Copy';
+      copyButton.addEventListener('click', () => {
+        navigator.clipboard.writeText(format.value).then(() => toast('Copied'));
+      });
+      card.append(label, value, copyButton);
+      output.appendChild(card);
+    });
+  } catch (e) {
+    preview.style.background = '#444';
+    const error = document.createElement('p');
+    error.style.color = 'var(--red)';
+    error.textContent = `Unable to convert ${hex}: ${e.message || e}`;
+    document.getElementById('format-output').replaceChildren(error);
+  }
+}
+
+document.getElementById('cp-convert').addEventListener('input', function() {
+  document.getElementById('hex-input').value = this.value.toUpperCase();
+  updateConvertFormats();
+});
+document.getElementById('hex-input').addEventListener('input', updateConvertFormats);
+updateConvertFormats();
+
+// Palette extraction tab.
+const paletteUpload = document.getElementById('palette-upload');
+const paletteFile = document.getElementById('palette-file');
+const paletteCanvas = document.getElementById('palette-canvas');
+const paletteCtx = paletteCanvas.getContext('2d');
+
+paletteUpload.addEventListener('click', () => paletteFile.click());
+paletteUpload.addEventListener('keydown', event => {
+  if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); paletteFile.click(); }
+});
+paletteUpload.addEventListener('dragover', e => { e.preventDefault(); paletteUpload.classList.add('dragover'); });
+paletteUpload.addEventListener('dragleave', () => paletteUpload.classList.remove('dragover'));
+paletteUpload.addEventListener('drop', e => {
+  e.preventDefault();
+  paletteUpload.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) processImage(file);
+});
+paletteFile.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (file) processImage(file);
+});
+
+async function processImage(file) {
+  const status = document.getElementById('palette-status');
+  status.textContent = 'Processing...';
+  try {
+    const allowedTypes = new Set(['image/png', 'image/jpeg', 'image/webp']);
+    if (!allowedTypes.has(file.type)) throw new Error('Use a PNG, JPEG, or WebP image.');
+    if (file.size > 25 * 1024 * 1024) throw new Error('Image files must be 25 MB or smaller.');
+    const bmp = await createImageBitmap(file);
+    // Downsample before copying pixels into the WASM boundary.
+    const MAX_DIM = 400;
+    let w = bmp.width, h = bmp.height;
+    if (w > MAX_DIM || h > MAX_DIM) {
+      const ratio = Math.min(MAX_DIM / w, MAX_DIM / h);
+      w = Math.round(w * ratio);
+      h = Math.round(h * ratio);
+    }
+    paletteCanvas.width = w;
+    paletteCanvas.height = h;
+    paletteCtx.drawImage(bmp, 0, 0, w, h);
+    const imageData = paletteCtx.getImageData(0, 0, w, h);
+    bmp.close();
+    window._palettePixels = new Uint8Array(imageData.data.buffer);
+    window._paletteW = w;
+    window._paletteH = h;
+    status.textContent = `Loaded ${w} x ${h}`;
+    extractPalette();
+  } catch (error) {
+    status.textContent = `Image could not be decoded: ${error.message || error}`;
+  }
+}
+
+function extractPalette() {
+  if (!window._palettePixels) return;
+  const count = parseInt(document.getElementById('palette-count').value);
+  document.getElementById('palette-count-val').textContent = count;
+  const status = document.getElementById('palette-status');
+  try {
+    const result = wasm_extract_palette(window._palettePixels, window._paletteW, window._paletteH, count);
+    const colors = parseValue(result);
+    const container = document.getElementById('palette-swatches');
+    container.replaceChildren();
+    colors.forEach(c => {
+      const json = JSON.stringify(c);
+      container.appendChild(makeSwatch(json, ''));
+    });
+    status.textContent = `Extracted ${colors.length} colors`;
+  } catch (e) {
+    status.textContent = `Palette extraction failed: ${e.message || e}`;
+  }
+}
+
+document.getElementById('palette-count').addEventListener('input', extractPalette);
+
+// Harmony tab.
+function harmonyColorJson() {
+  return colorToJson(document.getElementById('cp-harmony').value);
+}
+
+function updateHarmony(type) {
+  const container = document.getElementById('harmony-swatches');
+  const cj = harmonyColorJson();
+  container.replaceChildren();
+  let colors = [];
+  try {
+    switch(type) {
+      case 'complementary': colors = [parseValue(wasm_complementary(cj))]; break;
+      case 'analogous': colors = parseValue(wasm_analogous(cj)); break;
+      case 'triadic': colors = parseValue(wasm_triadic(cj)); break;
+      case 'tetradic': colors = parseValue(wasm_tetradic(cj)); break;
+      case 'monochromatic': colors = parseValue(wasm_monochromatic(cj, 7)); break;
+      case 'shades': colors = parseValue(wasm_shades(cj, 5)); break;
+      case 'tints': colors = parseValue(wasm_tints(cj, 5)); break;
+    }
+    colors.forEach(c => container.appendChild(makeSwatch(JSON.stringify(c), '')));
+  } catch (e) {
+    const error = document.createElement('p');
+    error.style.color = 'var(--red)';
+    error.textContent = `Calculation failed: ${e.message || e}`;
+    container.appendChild(error);
+  }
+}
+
+document.querySelectorAll('[data-harmony]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-harmony]').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-pressed', 'false');
+    });
+    btn.classList.add('active');
+    btn.setAttribute('aria-pressed', 'true');
+    updateHarmony(btn.dataset.harmony);
+  });
+});
+document.getElementById('cp-harmony').addEventListener('input', function() {
+  document.getElementById('harmony-hex').value = this.value.toUpperCase();
+  document.getElementById('harmony-preview').style.background = this.value;
+  const active = document.querySelector('[data-harmony].active');
+  if (active) updateHarmony(active.dataset.harmony);
+  else updateHarmony('complementary');
+});
+document.getElementById('harmony-hex').addEventListener('input', function() {
+  try {
+    const cj = colorToJson(this.value.trim());
+    const c = JSON.parse(cj);
+    const hex = '#' + [c.r, c.g, c.b].map(v => v.toString(16).padStart(2,'0')).join('');
+    document.getElementById('cp-harmony').value = hex;
+    document.getElementById('harmony-preview').style.background = hex;
+    const active = document.querySelector('[data-harmony].active');
+    if (active) updateHarmony(active.dataset.harmony);
+    else updateHarmony('complementary');
+  } catch(e) {}
+});
+// Show a useful default harmony on first load.
+document.querySelector('[data-harmony="complementary"]').click();
+
+// WCAG contrast tab.
+function updateContrast() {
+  const fgHex = document.getElementById('cp-fg').value;
+  const bgHex = document.getElementById('cp-bg').value;
+  document.getElementById('fg-hex').value = fgHex.toUpperCase();
+  document.getElementById('bg-hex').value = bgHex.toUpperCase();
+
+  try {
+    const fgJson = colorToJson(fgHex);
+    const bgJson = colorToJson(bgHex);
+    const result = parseValue(wasm_contrast_ratio(fgJson, bgJson));
+
+    document.getElementById('ratio-display').textContent = result.ratio.toFixed(2) + ':1';
+
+    const badges = document.getElementById('wcag-badges');
+    const items = [
+      { label: 'AA normal', pass: result.aa_normal },
+      { label: 'AA large', pass: result.aa_large },
+      { label: 'AAA normal', pass: result.aaa_normal },
+      { label: 'AAA large', pass: result.aaa_large },
+    ];
+    badges.replaceChildren(...items.map(item => {
+      const badge = document.createElement('div');
+      badge.className = `wcag-badge ${item.pass ? 'pass' : 'fail'}`;
+      badge.textContent = `${item.pass ? 'PASS' : 'FAIL'} - ${item.label}`;
+      return badge;
+    }));
+
+    // Preview bar
+    const bar = document.getElementById('contrast-preview-bar');
+    bar.style.background = bgHex;
+    bar.style.color = fgHex;
+  } catch (e) {
+    document.getElementById('ratio-display').textContent = '—';
+  }
+}
+
+document.getElementById('cp-fg').addEventListener('input', updateContrast);
+document.getElementById('cp-bg').addEventListener('input', updateContrast);
+document.getElementById('fg-hex').addEventListener('input', function() {
+  try {
+    const cj = colorToJson(this.value.trim());
+    const c = JSON.parse(cj);
+    const hex = '#' + [c.r, c.g, c.b].map(v => v.toString(16).padStart(2,'0')).join('');
+    document.getElementById('cp-fg').value = hex;
+    updateContrast();
+  } catch(e) {}
+});
+document.getElementById('bg-hex').addEventListener('input', function() {
+  try {
+    const cj = colorToJson(this.value.trim());
+    const c = JSON.parse(cj);
+    const hex = '#' + [c.r, c.g, c.b].map(v => v.toString(16).padStart(2,'0')).join('');
+    document.getElementById('cp-bg').value = hex;
+    updateContrast();
+  } catch(e) {}
+});
+updateContrast();
+
+// Gradient tab.
+function updateGradient() {
+  const stops = document.querySelectorAll('#gradient-stops .gradient-stop');
+  const direction = document.getElementById('gradient-direction').value;
+  const colors = [];
+  stops.forEach(stop => {
+    const cp = stop.querySelector('input[type="color"]');
+    colors.push(cp.value);
+    stop.querySelector('span').textContent = cp.value.toUpperCase();
+  });
+  const css = `background: linear-gradient(${direction}, ${colors.join(', ')});`;
+  document.getElementById('gradient-preview').style.background = `linear-gradient(${direction}, ${colors.join(', ')})`;
+  document.getElementById('gradient-css').textContent = css;
+}
+
+function addStop(hex = '#22c55e') {
+  const div = document.createElement('div');
+  div.className = 'gradient-stop';
+  const input = document.createElement('input');
+  input.type = 'color';
+  input.value = hex;
+  input.setAttribute('aria-label', 'Gradient stop');
+  const value = document.createElement('span');
+  value.style.cssText = 'font-family:var(--font-mono);font-size:.75rem;';
+  value.textContent = hex.toUpperCase();
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'remove-stop';
+  remove.title = 'Remove gradient stop';
+  remove.setAttribute('aria-label', 'Remove gradient stop');
+  remove.textContent = '×';
+  div.append(input, value, remove);
+  input.addEventListener('input', updateGradient);
+  remove.addEventListener('click', () => {
+    const stops = document.querySelectorAll('#gradient-stops .gradient-stop');
+    if (stops.length <= 2) { toast('Keep at least two stops'); return; }
+    div.remove();
+    updateGradient();
+  });
+  document.getElementById('gradient-stops').appendChild(div);
+  updateGradient();
+}
+
+document.getElementById('add-stop').addEventListener('click', () => addStop());
+document.getElementById('gradient-direction').addEventListener('change', updateGradient);
+document.querySelectorAll('#gradient-stops input[type="color"]').forEach(cp => {
+  cp.addEventListener('input', updateGradient);
+});
+document.querySelectorAll('#gradient-stops .remove-stop').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const stops = document.querySelectorAll('#gradient-stops .gradient-stop');
+    if (stops.length <= 2) { toast('Keep at least two stops'); return; }
+    this.parentElement.remove();
+    updateGradient();
+  });
+});
+
+document.getElementById('copy-gradient').addEventListener('click', () => {
+  navigator.clipboard.writeText(document.getElementById('gradient-css').textContent)
+    .then(() => toast('CSS copied'));
+});
+
+updateGradient();
+
+// Color-vision preview tab.
+function updateCVD() {
+  const hex = document.getElementById('cp-cvd').value;
+  document.getElementById('cvd-hex').value = hex.toUpperCase();
+  document.getElementById('cvd-preview').style.background = hex;
+
+  try {
+    const cj = colorToJson(hex);
+    const c = JSON.parse(cj);
+    const origHex = '#' + [c.r, c.g, c.b].map(v => v.toString(16).padStart(2,'0')).join('');
+
+    const types = [
+      { name: 'Original', fn: cj },
+      { name: 'Protanopia approximation', fn: wasm_protanopia(cj) },
+      { name: 'Deuteranopia approximation', fn: wasm_deuteranopia(cj) },
+      { name: 'Tritanopia approximation', fn: wasm_tritanopia(cj) },
+    ];
+
+    const output = document.getElementById('cvd-output');
+    output.replaceChildren(...types.map(t => {
+      const sc = parseValue(t.fn);
+      const shex = '#' + [sc.r, sc.g, sc.b].map(v => v.toString(16).padStart(2,'0')).join('');
+      const card = document.createElement('div');
+      card.className = 'cvd-card';
+      const swatch = document.createElement('div');
+      swatch.className = 'cvd-swatch';
+      swatch.style.background = shex;
+      const name = document.createElement('div');
+      name.style.cssText = 'font-weight:600;font-size:.85rem;';
+      name.textContent = t.name;
+      const value = document.createElement('div');
+      value.style.cssText = 'font-family:var(--font-mono);font-size:.7rem;color:var(--text-muted);';
+      value.textContent = shex;
+      card.append(swatch, name, value);
+      return card;
+    }));
+  } catch (e) {
+    const error = document.createElement('p');
+    error.style.color = 'var(--red)';
+    error.textContent = `Preview failed: ${e.message || e}`;
+    document.getElementById('cvd-output').replaceChildren(error);
+  }
+}
+
+document.getElementById('cp-cvd').addEventListener('input', updateCVD);
+document.getElementById('cvd-hex').addEventListener('input', function() {
+  try {
+    const cj = colorToJson(this.value.trim());
+    const c = JSON.parse(cj);
+    const hex = '#' + [c.r, c.g, c.b].map(v => v.toString(16).padStart(2,'0')).join('');
+    document.getElementById('cp-cvd').value = hex;
+    updateCVD();
+  } catch(e) {}
+});
+updateCVD();
+</script>
+<footer style="padding:10px 16px;text-align:center;color:var(--text-muted, #94a3b8);font-size:12px;line-height:1.4;flex:0 0 auto;">color_atlas by Tinkora</footer>
+</body>
+</html>
